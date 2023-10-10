@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { DatabaseService } from "./database/database.service";
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Post, Prisma } from '@prisma/client';
+import { DatabaseService } from "../database/database.service";
+import { UtilService } from "./utilService";
 
 @Injectable()
 export class PostService {
-  constructor(private db: DatabaseService) {
+  constructor(private db: DatabaseService, private utils: UtilService) {
   }
   async post(
     postWhereUniqueInput: Prisma.PostWhereUniqueInput,
@@ -14,20 +15,10 @@ export class PostService {
     });
   }
 
-  async posts(params: {
-    skip?: number;
-    take?: number;
-    cursor?: Prisma.PostWhereUniqueInput;
-    where?: Prisma.PostWhereInput;
-    orderBy?: Prisma.PostOrderByWithRelationInput;
-  }): Promise<Post[]> {
-    const { skip, take, cursor, where, orderBy } = params;
+  async posts(page: number, limit: number): Promise<Post[]> {
     return this.db.post.findMany({
-      skip,
-      take,
-      cursor,
-      where,
-      orderBy,
+      skip: this.utils.calculateSkip(page, limit),
+      take: limit,
     });
   }
 
@@ -36,7 +27,10 @@ export class PostService {
   }
 
   async deletePost(where: Prisma.PostWhereUniqueInput): Promise<Post> {
-    //TODO if found post then delete
+    const post = await this.post(where)
+    if(!post) {
+      throw new HttpException('Not found post with this id', HttpStatus.NOT_FOUND)
+    }
     return this.db.post.delete({
       where,
     });

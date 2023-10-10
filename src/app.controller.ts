@@ -6,36 +6,26 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  Put,
+  Put, Query,
   UsePipes,
   ValidationPipe
 } from '@nestjs/common';
-import { PostService } from './postService';
 import { Post as PostModel } from '@prisma/client';
 import { CreatePostDto } from "./dto/createPostDto";
 import { UpdatePostDto } from "./dto/updatePostDto";
+import { PostService } from "./service/postService";
 
 @Controller()
 export class AppController {
   constructor(private readonly postService: PostService) {
   }
 
-  @Get('posts/:searchString')
-  async getFilteredPosts(
-    @Param('searchString') searchString?: string
+  @Get('posts')
+  async getPosts(
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('page', ParseIntPipe) page: number
   ): Promise<PostModel[]> {
-    return this.postService.posts({
-      where: {
-        OR: [
-          {
-            title: { contains: searchString },
-          },
-          {
-            body: { contains: searchString },
-          },
-        ],
-      },
-    });
+    return this.postService.posts(page, limit);
   }
 
   @UsePipes(new ValidationPipe())
